@@ -2,6 +2,7 @@
 
 # Import necessary libraries
 import torch
+import numpy as np
 from transformers import RobertaForSequenceClassification, RobertaTokenizer, TrainingArguments, Trainer
 from datasets import load_dataset
 import loralib as lora
@@ -64,7 +65,18 @@ metric = evaluate.load("glue", "mnli")
 # Compute metrics function
 def compute_metrics(eval_pred):
     logits, labels = eval_pred
+
+    # Convert logits to PyTorch Tensor if they are a numpy array
+    if isinstance(logits, np.ndarray):
+        logits = torch.from_numpy(logits)
+
+    # Calculate predictions using torch.argmax
     predictions = torch.argmax(logits, dim=-1)
+
+    # Ensure predictions and labels are converted to numpy arrays for metric computation
+    predictions = predictions.numpy() if predictions.requires_grad else predictions.detach().cpu().numpy()
+    labels = labels.numpy() if isinstance(labels, torch.Tensor) else labels
+
     return metric.compute(predictions=predictions, references=labels)
 
 # Initialize and start the training process using the Hugging Face Trainer API
